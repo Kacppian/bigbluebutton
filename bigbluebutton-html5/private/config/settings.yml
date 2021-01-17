@@ -7,12 +7,12 @@ public:
     listenOnlyMode: true
     forceListenOnly: false
     skipCheck: false
-    clientTitle: BigBlueButton
-    appName: BigBlueButton HTML5 Client
-    bbbServerVersion: 2.3-dev
-    copyright: '©2020 BigBlueButton Inc.'
+    clientTitle: Ingenium
+    appName: Ingenium Client
+    bbbServerVersion: 2.2
+    copyright: "©2020 Ingenium"
     html5ClientBuild: HTML5_CLIENT_VERSION
-    helpLink: https://bigbluebutton.org/html5/
+    helpLink: https://class.ingenium.com
     lockOnJoin: true
     cdn: ''
     basename: '/html5client'
@@ -107,10 +107,12 @@ public:
     enableNetworkMonitoring: false
     packetLostThreshold: 10
   kurento:
-    wsUrl: HOST
+    wsUrl: wss://live.ingeniumedu.com/bbb-webrtc-sfu
     # Valid for video-provider. Time (ms) before its WS connection times out
     # and tries to reconnect.
     wsConnectionTimeout: 4000
+    # Time in milis to wait for the browser to return a gUM call (used in video-preview)
+    gUMTimeout: 20000
     cameraTimeouts:
       # Base camera timeout: used as the camera *sharing* timeout and
       # as the minimum camera subscribe reconnection timeout
