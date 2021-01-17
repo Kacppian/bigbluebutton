@@ -2,6 +2,7 @@ import Logger from '/imports/startup/server/logger';
 import Users from '/imports/api/users';
 import { extractCredentials } from '/imports/api/common/server/helpers';
 import { attendanceOnLeave } from './submitAttendance';
+import ClientConnections from '/imports/startup/server/ClientConnections';
 
 export default function userLeftMeeting() { // TODO-- spread the code to method/modifier/handler
   // so we don't update the db in a method
@@ -20,6 +21,17 @@ export default function userLeftMeeting() { // TODO-- spread the code to method/
       attendanceOnLeave(meetingId, User.extId);
       Logger.info(`user left id=${requesterUserId} meeting=${meetingId}`);
     }
+    ClientConnections.removeClientConnection(this.userId, this.connection.id);
+
+    Users.update(
+      selector,
+      {
+        $set: {
+          loggedOut: true,
+        },
+      },
+      cb,
+    );
   } catch (err) {
     Logger.error(`leaving dummy user to collection: ${err}`);
   }

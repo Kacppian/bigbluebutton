@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import cx from 'classnames';
 import Button from '/imports/ui/components/button/component';
 import VideoService from '../service';
-import { defineMessages, injectIntl, intlShape } from 'react-intl';
+import { defineMessages, injectIntl } from 'react-intl';
 import { styles } from './styles';
 import { validIOSVersion } from '/imports/ui/components/app/service';
 
@@ -39,7 +39,7 @@ const intlMessages = defineMessages({
 });
 
 const propTypes = {
-  intl: intlShape.isRequired,
+  intl: PropTypes.object.isRequired,
   hasVideoStream: PropTypes.bool.isRequired,
   mountVideoPreview: PropTypes.func.isRequired,
 };
@@ -73,6 +73,7 @@ const JoinVideoButton = ({
   return (
     <Button
       label={label}
+      data-test="joinVideo"
       className={cx(styles.button, hasVideoStream || styles.btn)}
       onClick={handleOnClick}
       hideLabel

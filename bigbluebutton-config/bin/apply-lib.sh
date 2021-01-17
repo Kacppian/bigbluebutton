@@ -1,10 +1,9 @@
-#!/bin/bash -e
-
-# This is a library of functions for apply-config.sh, which, if created, will be automatically called by
-# bbb-conf when you run
+# This is a library of functions for 
 #
-#   bbb-conf --restart
-#   bbb-conf --seitp ...
+#  /etc/bigbluebutton/bbb-conf/apply-config.sh
+#
+# which (if exists) will be run by `bbb-conf --setip` and `bbb-conf --restart` before restarting
+# BigBlueButton.
 #
 # The purpose of apply-config.sh is to make it easy to apply your configuration changes to a BigBlueButton server 
 # before BigBlueButton starts
@@ -33,7 +32,9 @@ if [ -f $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties ]; then
 fi
 
 HOST=$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | grep -v '#' | sed -n '/^bigbluebutton.web.serverURL/{s/.*\///;p}')
+
 HTML5_CONFIG=/usr/share/meteor/bundle/programs/server/assets/app/config/settings.yml
+BBB_WEB_CONFIG=$SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties
 
 
 #
@@ -72,16 +73,6 @@ HERE
   #   tail -f /var/log/nginx/html5-client.log | sed -u 's/\\x22/"/g' | sed -u 's/\\x5C//g'
 }
 
-#
-# Enable HTML5 as default
-#
-setHTML5ClientAsDefault() {
-  echo "  - Make HTML5 the default client in /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
-
-  sed -i 's/^attendeesJoinViaHTML5Client=.*/attendeesJoinViaHTML5Client=true/'   /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
-  sed -i 's/^moderatorsJoinViaHTML5Client=.*/moderatorsJoinViaHTML5Client=true/' /usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties
-}
-
 
 enableHTML5CameraQualityThresholds() {
   echo "  - Enable HTML5 cameraQualityThresholds"
@@ -104,13 +95,6 @@ enableUFWRules() {
     apt-get install -y ufw
   fi
 
-  #  Add 1935 if Flash client is enabled
-  if [[ "$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | sed -n '/^attendeesJoinViaHTML5Client/{s/.*=//;p}')" == "true" &&
-        "$(cat $SERVLET_DIR/WEB-INF/classes/bigbluebutton.properties | sed -n '/^moderatorsJoinViaHTML5Client/{s/.*=//;p}')" == "true" ]]; then
-    ufw deny 1935/tcp
-  else
-    ufw allow 1935/tcp
-  fi
   ufw allow OpenSSH
   ufw allow "Nginx Full"
   ufw allow 16384:32768/udp
@@ -241,6 +225,19 @@ disableMultipleKurentos() {
   yq w -i $KURENTO_CONFIG balancing-strategy ROUND_ROBIN
 }
 
+setNumberOfHTML5Processes() {
+  HTML5_RESTRICTIONS_FILE=/usr/share/meteor/bundle/bbb-html5.conf
+  NUMBER_OF_PROCESSES=`echo $1 | bc`
+
+  source $HTML5_RESTRICTIONS_FILE
+
+  echo "setNumberOfHTML5Processes with number of processes in the range ($INSTANCE_MIN to $INSTANCE_MAX)"
+  echo "setNumberOfHTML5Processes with NUMBER_OF_PROCESSES=$NUMBER_OF_PROCESSES"
+
+  sed -i -e "s|DESIRED_INSTANCE_COUNT=.*$|DESIRED_INSTANCE_COUNT=$NUMBER_OF_PROCESSES|g" $HTML5_RESTRICTIONS_FILE
+
+  systemctl restart bbb-html5
+}
 
 
 notCalled() {
@@ -263,13 +260,14 @@ source /etc/bigbluebutton/bbb-conf/apply-lib.sh
 # Available configuration options
 
 #enableHTML5ClientLog
-#setHTML5ClientAsDefault
 #enableUFWRules
 
 #enableHTML5CameraQualityThresholds
 #enableHTML5WebcamPagination
 
 #enableMultipleKurentos
+
+#setNumberOfHTML5Processes 2
 
 # Shorten the FreeSWITCH "you have been muted" and "you have been unmuted" prompts
 # cp -r /etc/bigbluebutton/bbb-conf/sounds /opt/freeswitch/share/freeswitch

@@ -123,6 +123,7 @@ class VideoListItem extends Component {
 
     return (
       <FullscreenButtonContainer
+        data-test="presentationFullscreenButton"
         fullscreenRef={this.videoContainer}
         elementName={name}
         isFullscreen={isFullscreen}
@@ -151,14 +152,14 @@ class VideoListItem extends Component {
     const isFirefox = (result && result.name) ? result.name.includes('firefox') : false;
 
     return (
-      <div className={cx({
+      <div data-test={voiceUser.talking ? 'webcamItemTalkingUser' : 'webcamItem'} className={cx({
         [styles.content]: true,
         [styles.talking]: voiceUser.talking,
       })}
       >
         {
           !videoIsReady &&
-            <div className={styles.connecting}>
+            <div data-test="webcamConnecting" className={styles.connecting}>
               <span className={styles.loadingText}>{name}</span>
             </div>
         }
@@ -168,6 +169,7 @@ class VideoListItem extends Component {
         >
           <video
             muted
+            data-test={this.mirrorOwnWebcam ? 'mirroredVideoContainer' : 'videoContainer'}
             className={cx({
               [styles.media]: true,
               [styles.cursorGrab]: !webcamDraggableState.dragging

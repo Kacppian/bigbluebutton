@@ -119,16 +119,18 @@ class VideoList extends Component {
 
     this.handleCanvasResize();
     window.addEventListener('resize', this.handleCanvasResize, false);
+    window.addEventListener('layoutSizesSets', this.handleCanvasResize, false);
     window.addEventListener('videoPlayFailed', this.handlePlayElementFailed);
   }
 
   componentWillUnmount() {
     window.removeEventListener('resize', this.handleCanvasResize, false);
+    window.removeEventListener('layoutSizesSets', this.handleCanvasResize, false);
     window.removeEventListener('videoPlayFailed', this.handlePlayElementFailed);
   }
 
   setOptimalGrid() {
-    const { streams } = this.props;
+    const { streams, webcamDraggableDispatch } = this.props;
     let numItems = streams.length;
     if (numItems < 1 || !this.canvas || !this.grid) {
       return;
@@ -154,6 +156,12 @@ class VideoList extends Component {
         const betterThanCurrent = testGrid.filledArea > currentGrid.filledArea;
         return focusedConstraint && betterThanCurrent ? testGrid : currentGrid;
       }, { filledArea: 0 });
+    webcamDraggableDispatch(
+      {
+        type: 'setOptimalGrid',
+        value: optimalGrid,
+      },
+    );
     this.setState({
       optimalGrid,
     });

@@ -11,9 +11,9 @@ import iosWebviewAudioPolyfills from '/imports/utils/ios-webview-audio-polyfills
 import { tryGenerateIceCandidates } from '/imports/utils/safari-webrtc';
 import { monitorAudioConnection } from '/imports/utils/stats';
 import AudioErrors from './error-codes';
+import {Meteor} from "meteor/meteor";
 
-const ENABLE_NETWORK_MONITORING = Meteor.settings.public.networkMonitoring.enableNetworkMonitoring;
-
+const STATS = Meteor.settings.public.stats;
 const MEDIA = Meteor.settings.public.media;
 const MEDIA_TAG = MEDIA.mediaTag;
 const ECHO_TEST_NUMBER = MEDIA.echoTestNumber;
@@ -337,7 +337,7 @@ class AudioManager {
       window.parent.postMessage({ response: 'joinedAudio' }, '*');
       this.notify(this.intl.formatMessage(this.messages.info.JOINED_AUDIO));
       logger.info({ logCode: 'audio_joined' }, 'Audio Joined');
-      if (ENABLE_NETWORK_MONITORING) this.monitor();
+      if (STATS.enabled) this.monitor();
     }
   }
 
@@ -428,7 +428,8 @@ class AudioManager {
 
     // Play bogus silent audio to try to circumvent autoplay policy on Safari
     if (!audio.src) {
-      audio.src = 'resources/sounds/silence.mp3';
+      audio.src = `${Meteor.settings.public.app.cdn
+      + Meteor.settings.public.app.basename + Meteor.settings.public.app.instanceId}` + 'resources/sounds/silence.mp3';
     }
 
     audio.play().catch((e) => {
@@ -531,7 +532,7 @@ class AudioManager {
 
   playHangUpSound() {
     this.playAlertSound(`${Meteor.settings.public.app.cdn
-      + Meteor.settings.public.app.basename}`
+      + Meteor.settings.public.app.basename + Meteor.settings.public.app.instanceId}`
       + '/resources/sounds/LeftCall.mp3');
   }
 
@@ -591,7 +592,7 @@ class AudioManager {
     }
   }
 
-  setSenderTrackEnabled (shouldEnable) {
+  setSenderTrackEnabled(shouldEnable) {
     // If the bridge is set to listen only mode, nothing to do here. This method
     // is solely for muting outbound tracks.
     if (this.isListenOnly) return;
@@ -611,11 +612,11 @@ class AudioManager {
     });
   }
 
-  mute () {
+  mute() {
     this.setSenderTrackEnabled(false);
   }
 
-  unmute () {
+  unmute() {
     this.setSenderTrackEnabled(true);
   }
 

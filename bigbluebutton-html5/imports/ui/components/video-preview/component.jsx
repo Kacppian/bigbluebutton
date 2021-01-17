@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import {
-  defineMessages, injectIntl, intlShape, FormattedMessage,
+  defineMessages, injectIntl, FormattedMessage,
 } from 'react-intl';
 import Button from '/imports/ui/components/button/component';
 // import { notify } from '/imports/ui/services/notification';
@@ -23,7 +23,7 @@ const VIEW_STATES = {
 };
 
 const propTypes = {
-  intl: intlShape.isRequired,
+  intl: PropTypes.object.isRequired,
   closeModal: PropTypes.func.isRequired,
   startSharing: PropTypes.func.isRequired,
   stopSharing: PropTypes.func.isRequired,
@@ -204,8 +204,8 @@ class VideoPreview extends Component {
       previewError: null,
     };
 
-    this.mirrorOwnWebcam = VideoService.mirrorOwnWebcam();
     this.userParameterProfile = VideoService.getUserParameterProfile();
+    this.mirrorOwnWebcam = VideoService.mirrorOwnWebcam();
   }
 
   componentDidMount() {
@@ -260,8 +260,8 @@ class VideoPreview extends Component {
                 if (device.kind === 'videoinput' && !found) {
                   webcams.push(device);
                   if (!initialDeviceId
-                  || (webcamDeviceId && webcamDeviceId === device.deviceId)
-                  || device.deviceId === firstAllowedDeviceId) {
+                    || (webcamDeviceId && webcamDeviceId === device.deviceId)
+                    || device.deviceId === firstAllowedDeviceId) {
                     initialDeviceId = device.deviceId;
                   }
                 }
@@ -288,9 +288,31 @@ class VideoPreview extends Component {
                 });
               }
             }).catch((error) => {
-              this.handleDeviceError('enumerate', error, 'enumerating devices');
+              logger.warn({
+                logCode: 'video_preview_enumerate_error',
+                extraInfo: {
+                  errorName: error.name,
+                  errorMessage: error.message,
+                },
+              }, 'Error enumerating devices');
+              this.setState({
+                viewState: VIEW_STATES.error,
+                deviceError: VideoPreview.handleGUMError(error),
+              });
             });
+          }).catch((error) => {
+          logger.warn({
+            logCode: 'video_preview_initial_device_error',
+            extraInfo: {
+              errorName: error.name,
+              errorMessage: error.message,
+            },
+          }, 'Error getting initial device');
+          this.setState({
+            viewState: VIEW_STATES.error,
+            deviceError: VideoPreview.handleGUMError(error),
           });
+        });
       } catch (error) {
         this.handleDeviceError('grabbing', error, 'grabbing initial video stream');
       }
@@ -494,7 +516,7 @@ class VideoPreview extends Component {
     const {
       intl,
       skipVideoPreview,
-      sharedDevices
+      sharedDevices,
     } = this.props;
 
     const {
@@ -534,43 +556,43 @@ class VideoPreview extends Component {
           )
         }
         { shared
-           ? (
-             <span className={styles.label}>
+          ? (
+            <span className={styles.label}>
                {intl.formatMessage(intlMessages.sharedCameraLabel)}
              </span>
-           )
-           : (
-             <span>
+          )
+          : (
+            <span>
                <label className={styles.label} htmlFor="setQuality">
                  {intl.formatMessage(intlMessages.qualityLabel)}
                </label>
-               { availableProfiles && availableProfiles.length > 0
-                 ? (
-                   <select
-                     id="setQuality"
-                     value={selectedProfile || ''}
-                     className={styles.select}
-                     onChange={this.handleSelectProfile}
-                     disabled={skipVideoPreview}
-                   >
-                     {availableProfiles.map(profile => {
+              { availableProfiles && availableProfiles.length > 0
+                ? (
+                  <select
+                    id="setQuality"
+                    value={selectedProfile || ''}
+                    className={styles.select}
+                    onChange={this.handleSelectProfile}
+                    disabled={skipVideoPreview}
+                  >
+                    {availableProfiles.map(profile => {
                       const label = intlMessages[`${profile.id}`]
                         ? intl.formatMessage(intlMessages[`${profile.id}`])
                         : profile.name;
 
                       return (
-                       <option key={profile.id} value={profile.id}>
+                        <option key={profile.id} value={profile.id}>
                           {`${label}`}
-                       </option>
-                     )})}
-                   </select>
-                 )
-                 : (
-                   <span>
+                        </option>
+                      )})}
+                  </select>
+                )
+                : (
+                  <span>
                      {intl.formatMessage(intlMessages.profileNotFoundLabel)}
                    </span>
-                 )
-               }
+                )
+              }
             </span>
           )
         }
@@ -613,24 +635,25 @@ class VideoPreview extends Component {
           <div className={styles.content}>
             <div className={styles.videoCol}>
               {
-              previewError
-                ? (
-                  <div>{previewError}</div>
-                )
-                : (
-                  <video
-                    id="preview"
-                    className={cx({
-                      [styles.preview]: true,
-                      [styles.mirroredVideo]: this.mirrorOwnWebcam,
-                    })}
-                    ref={(ref) => { this.video = ref; }}
-                    autoPlay
-                    playsInline
-                    muted
-                  />
-                )
-            }
+                previewError
+                  ? (
+                    <div>{previewError}</div>
+                  )
+                  : (
+                    <video
+                      id="preview"
+                      data-test={this.mirrorOwnWebcam ? 'mirroredVideoPreview' : 'videoPreview'}
+                      className={cx({
+                        [styles.preview]: true,
+                        [styles.mirroredVideo]: this.mirrorOwnWebcam,
+                      })}
+                      ref={(ref) => { this.video = ref; }}
+                      autoPlay
+                      playsInline
+                      muted
+                    />
+                  )
+              }
             </div>
             {this.renderDeviceSelectors()}
           </div>
@@ -695,7 +718,8 @@ class VideoPreview extends Component {
               disabled={shouldDisableButtons}
             />
             <Button
-              color={shared ? "danger" : "primary"}
+              data-test="startSharingWebcam"
+              color={shared ? 'danger' : 'primary'}
               label={intl.formatMessage(shared ? intlMessages.stopSharingLabel : intlMessages.startSharingLabel)}
               onClick={shared ? this.handleStopSharing : this.handleStartSharing}
               disabled={isStartSharingDisabled || isStartSharingDisabled === null || shouldDisableButtons}

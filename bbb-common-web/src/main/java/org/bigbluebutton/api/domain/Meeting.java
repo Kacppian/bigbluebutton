@@ -82,8 +82,6 @@ public class Meeting {
 	private Boolean muteOnStart = false;
 	private Boolean allowModsToUnmuteUsers = false;
 
-	private Integer maxInactivityTimeoutMinutes = 120;
-	private Integer warnMinutesBeforeMax = 5;
 	private Integer meetingExpireIfNoUserJoinedInMinutes = 5;
 	private Integer meetingExpireWhenLastUserLeftInMinutes = 1;
 	private Integer userInactivityInspectTimerInMinutes = 120;
@@ -99,6 +97,7 @@ public class Meeting {
 
 	public final Boolean endWhenNoModerator;
 
+	private Integer html5InstanceId;
 
     public Meeting(Meeting.Builder builder) {
         name = builder.name;
@@ -130,6 +129,7 @@ public class Meeting {
         lockSettingsParams = builder.lockSettingsParams;
         allowDuplicateExtUserid = builder.allowDuplicateExtUserid;
         endWhenNoModerator = builder.endWhenNoModerator;
+        html5InstanceId = builder.html5InstanceId;
 
         userCustomData = new HashMap<>();
 
@@ -191,6 +191,13 @@ public class Meeting {
 	    return users;
 	}
 
+	public void guestIsWaiting(String userId) {
+		RegisteredUser ruser = registeredUsers.get(userId);
+		if (ruser != null) {
+			ruser.updateGuestWaitedOn();
+		}
+	}
+
 	public void setGuestStatusWithId(String userId, String guestStatus) {
     	User user = getUserById(userId);
     	if (user != null) {
@@ -223,7 +230,11 @@ public class Meeting {
 		return GuestPolicy.DENY;
 	}
 
-	public long getStartTime() {
+	public int getHtml5InstanceId() { return html5InstanceId; }
+
+    public void setHtml5InstanceId(int instanceId) { html5InstanceId = instanceId; }
+
+    public long getStartTime() {
 		return startTime;
 	}
 	
@@ -541,22 +552,6 @@ public class Meeting {
 		userCustomData.put(userID, data);
 	}
 
-	public void setMaxInactivityTimeoutMinutes(Integer value) {
-		maxInactivityTimeoutMinutes = value;
-	}
-
-	public void setWarnMinutesBeforeMax(Integer value) {
-		warnMinutesBeforeMax = value;
-	}
-
-	public Integer getMaxInactivityTimeoutMinutes() {
-		return maxInactivityTimeoutMinutes;
-	}
-
-	public Integer getWarnMinutesBeforeMax() {
-		return warnMinutesBeforeMax;
-	}
-
 	public void setMeetingExpireWhenLastUserLeftInMinutes(Integer value) {
 		meetingExpireWhenLastUserLeftInMinutes = value;
 	}
@@ -679,6 +674,7 @@ public class Meeting {
     	private LockSettingsParams lockSettingsParams;
 		private Boolean allowDuplicateExtUserid;
 		private Boolean endWhenNoModerator;
+		private int html5InstanceId;
 
     	public Builder(String externalId, String internalId, long createTime) {
     		this.externalId = externalId;
@@ -813,6 +809,11 @@ public class Meeting {
 
 		public Builder withEndWhenNoModerator(Boolean endWhenNoModerator) {
     		this.endWhenNoModerator = endWhenNoModerator;
+    		return this;
+		}
+
+		public Builder withHTML5InstanceId(int instanceId) {
+    		html5InstanceId = instanceId;
     		return this;
 		}
     

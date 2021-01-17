@@ -28,11 +28,11 @@ const isCamLocked = () => {
 };
 
 export default withModalMounter(withTracker(({ mountModal, fromInterface }) => ({
-  startSharing: deviceId => {
+  startSharing: (deviceId) => {
     mountModal(null);
     VideoService.joinVideo(deviceId);
   },
-  stopSharing: deviceId => {
+  stopSharing: (deviceId) => {
     mountModal(null);
     if (deviceId) {
       const stream = VideoService.getMyStream(deviceId);

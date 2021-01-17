@@ -17,8 +17,7 @@ const makeEnvelope = (channel, eventName, header, body, routing) => {
     envelope: {
       name: eventName,
       routing: routing || {
-        sender: 'bbb-apps-akka',
-        // sender: 'html5-server', // TODO
+        sender: 'html5-server',
       },
       timestamp: Date.now(),
     },
@@ -120,6 +119,10 @@ class RedisPubSub {
     this.didSendRequestEvent = false;
     const host = process.env.REDIS_HOST || Meteor.settings.private.redis.host;
     const redisConf = Meteor.settings.private.redis;
+    this.instanceMax = parseInt(process.env.INSTANCE_MAX, 10) || 1;
+    this.instanceId = parseInt(process.env.INSTANCE_ID, 10) || 1; // 1 also handles running in dev mode
+    this.customRedisChannel = `to-html5-redis-channel${this.instanceId}`;
+
     const { password, port } = redisConf;
 
     if (password) {
@@ -138,6 +141,7 @@ class RedisPubSub {
 
     this.emitter = new EventEmitter2();
     this.mettingsQueues = {};
+    this.mettingsQueues[NO_MEETING_ID] = new MeetingMessageQueue(this.emitter, this.config.async, this.config.debug);
 
     this.handleSubscribe = this.handleSubscribe.bind(this);
     this.handleMessage = this.handleMessage.bind(this);
@@ -148,6 +152,8 @@ class RedisPubSub {
     this.sub.on('pmessage', Meteor.bindEnvironment(this.handleMessage));
 
     const channelsToSubscribe = this.config.subscribeTo;
+
+    channelsToSubscribe.push(this.customRedisChannel);
 
     channelsToSubscribe.forEach((channel) => {
       this.sub.psubscribe(channel);
@@ -175,6 +181,7 @@ class RedisPubSub {
 
     const body = {
       requesterId: 'nodeJSapp',
+      html5InstanceId: this.instanceId,
     };
 
     this.publishSystemMessage(CHANNEL, EVENT_NAME, body);
@@ -199,20 +206,32 @@ class RedisPubSub {
 
     const queueId = meetingId || NO_MEETING_ID;
 
-    if (queueMetrics) {
-      Metrics.addEvent(queueId, eventName, message.length);
+    if (eventName === 'MeetingCreatedEvtMsg' || eventName === 'SyncGetMeetingInfoRespMsg') {
+      const newIntId = parsedMessage.core.body.props.meetingProp.intId;
+      const instanceId = parsedMessage.core.body.props.systemProps.html5InstanceId;
+
+      Logger.warn(`${eventName} (name=${parsedMessage.core.body.props.meetingProp.name}) received with meetingInstance: ${instanceId} -- this is instance: ${this.instanceId}`);
+
+      if (instanceId === this.instanceId) {
+        this.mettingsQueues[newIntId] = new MeetingMessageQueue(this.emitter, async, this.redisDebugEnabled);
+      } else {
+        // Logger.error('THIS NODEJS ' + this.instanceId + ' IS **NOT** PROCESSING EVENTS FOR THIS MEETING ' + instanceId)
+      }
     }
 
-    if (!(queueId in this.mettingsQueues)) {
-      this.mettingsQueues[meetingId] = new MeetingMessageQueue(this.emitter, async, this.redisDebugEnabled);
-    }
+    // if (channel !== this.customRedisChannel && queueId in this.mettingsQueues) {
+    //   Logger.error(`Consider routing ${eventName} to ${this.customRedisChannel}` );
+    //   // Logger.error(`Consider routing ${eventName} to ${this.customRedisChannel}` + message);
+    // }
 
-    this.mettingsQueues[meetingId].add({
-      pattern,
-      channel,
-      eventName,
-      parsedMessage,
-    });
+    if (channel === this.customRedisChannel || queueId in this.mettingsQueues) {
+      this.mettingsQueues[queueId].add({
+        pattern,
+        channel,
+        eventName,
+        parsedMessage,
+      });
+    }
   }
 
   destroyMeetingQueue(id) {

@@ -75,12 +75,15 @@ class VideoService {
     this.record = null;
     this.hackRecordViewer = null;
 
-    this.updateNumberOfDevices = this.updateNumberOfDevices.bind(this);
-    // Safari doesn't support ondevicechange
-    if (!this.isSafari) {
-      navigator.mediaDevices.ondevicechange = (event) => this.updateNumberOfDevices();
+    // If the page isn't served over HTTPS there won't be mediaDevices
+    if (navigator.mediaDevices) {
+      this.updateNumberOfDevices = this.updateNumberOfDevices.bind(this);
+      // Safari doesn't support ondevicechange
+      if (!this.isSafari) {
+        navigator.mediaDevices.ondevicechange = event => this.updateNumberOfDevices();
+      }
+      this.updateNumberOfDevices();
     }
-    this.updateNumberOfDevices();
   }
 
   defineProperties(obj) {
@@ -373,7 +376,7 @@ class VideoService {
 
   getMyRole () {
     return Users.findOne({ userId: Auth.userID },
-      { fields: { role: 1 } }).role;
+      { fields: { role: 1 } })?.role;
   }
 
   getRecord() {
@@ -408,7 +411,6 @@ class VideoService {
       const moderators = Users.find(
         {
           meetingId: Auth.meetingID,
-          connectionStatus: 'online',
           role: ROLE_MODERATOR,
         },
         { fields: { userId: 1 } },
@@ -437,7 +439,7 @@ class VideoService {
   webcamsOnlyForModerator() {
     const m = Meetings.findOne({ meetingId: Auth.meetingID },
       { fields: { 'usersProp.webcamsOnlyForModerator': 1 } });
-    return m.usersProp ? m.usersProp.webcamsOnlyForModerator : false;
+    return m?.usersProp ? m.usersProp.webcamsOnlyForModerator : false;
   }
 
   getInfo() {
@@ -465,8 +467,8 @@ class VideoService {
       {
         meetingId: Auth.meetingID,
         userId: Auth.userID,
-        deviceId: deviceId
-      }, { fields: { stream: 1 } }
+        deviceId,
+      }, { fields: { stream: 1 } },
     );
     return videoStream ? videoStream.stream : null;
   }
@@ -590,11 +592,13 @@ class VideoService {
     if (ENABLE_NETWORK_MONITORING) monitorVideoConnection(conn);
   }
 
+  // to be used soon (Paulo)
   amIModerator() {
     return Users.findOne({ userId: Auth.userID },
       { fields: { role: 1 } }).role === ROLE_MODERATOR;
   }
 
+  // to be used soon (Paulo)
   getNumberOfPublishers() {
     return VideoStreams.find({ meetingId: Auth.meetingID }).count();
   }
@@ -749,7 +753,7 @@ export default {
   getUserParameterProfile: () => videoService.getUserParameterProfile(),
   isMultipleCamerasEnabled: () => videoService.isMultipleCamerasEnabled(),
   monitor: conn => videoService.monitor(conn),
-  mirrorOwnWebcam: user => videoService.mirrorOwnWebcam(user),
+  mirrorOwnWebcam: userId => videoService.mirrorOwnWebcam(userId),
   onBeforeUnload: () => videoService.onBeforeUnload(),
   notify: message => notify(message, 'error', 'video'),
   updateNumberOfDevices: devices => videoService.updateNumberOfDevices(devices),

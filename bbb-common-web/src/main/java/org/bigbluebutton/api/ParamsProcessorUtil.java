@@ -72,12 +72,10 @@ public class ParamsProcessorUtil {
     private String defaultLogoutUrl;
     private String defaultServerUrl;
     private int defaultNumDigitsForTelVoice;
-    private String defaultClientUrl;
+    private String defaultHTML5ClientUrl;
     private String defaultGuestWaitURL;
-    private String html5ClientUrl;
-    private Boolean moderatorsJoinViaHTML5Client;
-    private Boolean attendeesJoinViaHTML5Client;
     private Boolean allowRequestsWithoutSession;
+    private Boolean useDefaultAvatar = false;
     private String defaultAvatarURL;
     private String defaultConfigURL;
     private String defaultGuestPolicy;
@@ -107,9 +105,7 @@ public class ParamsProcessorUtil {
 
     private Long maxPresentationFileUpload = 30000000L; // 30MB
 
-    private Integer maxInactivityTimeoutMinutes = 120;
     private Integer clientLogoutTimerInMinutes = 0;
-	private Integer warnMinutesBeforeMax = 5;
 	private Integer meetingExpireIfNoUserJoinedInMinutes = 5;
 	private Integer meetingExpireWhenLastUserLeftInMinutes = 1;
 	private Integer userInactivityInspectTimerInMinutes = 120;
@@ -117,6 +113,7 @@ public class ParamsProcessorUtil {
     private Integer userActivitySignResponseDelayInMinutes = 5;
     private Boolean defaultAllowDuplicateExtUserid = true;
 	private Boolean defaultEndWhenNoModerator = false;
+	private Integer defaultHtml5InstanceId = 1;
 
 	private String formatConfNum(String s) {
 		if (s.length() > 5) {
@@ -466,6 +463,10 @@ public class ParamsProcessorUtil {
             externalMeetingId = externalHash + "-" + timeStamp;
         }
 
+        String avatarURL = useDefaultAvatar ? defaultAvatarURL : "";
+
+        int html5InstanceId = processHtml5InstanceId(params.get(ApiParams.HTML5_INSTANCE_ID));
+
         // Create the meeting with all passed in parameters.
         Meeting meeting = new Meeting.Builder(externalMeetingId,
                 internalMeetingId, createTime).withName(meetingName)
@@ -476,7 +477,7 @@ public class ParamsProcessorUtil {
                 .withBannerText(bannerText).withBannerColor(bannerColor)
                 .withTelVoice(telVoice).withWebVoice(webVoice)
                 .withDialNumber(dialNumber)
-                .withDefaultAvatarURL(defaultAvatarURL)
+                .withDefaultAvatarURL(avatarURL)
                 .withAutoStartRecording(autoStartRec)
                 .withAllowStartStopRecording(allowStartStoptRec)
                 .withWebcamsOnlyForModerator(webcamsOnlyForMod)
@@ -487,6 +488,7 @@ public class ParamsProcessorUtil {
 				.withBreakoutRoomsParams(breakoutParams)
 				.withLockSettingsParams(lockSettingsParams)
 				.withAllowDuplicateExtUserid(defaultAllowDuplicateExtUserid)
+                .withHTML5InstanceId(html5InstanceId)
                 .build();
 
         String configXML = getDefaultConfigXML();
@@ -504,13 +506,12 @@ public class ParamsProcessorUtil {
         	meeting.setMeetingEndedCallbackURL(meetingEndedCallbackURL);
         }
 
-        meeting.setMaxInactivityTimeoutMinutes(maxInactivityTimeoutMinutes);
-        meeting.setWarnMinutesBeforeMax(warnMinutesBeforeMax);
         meeting.setMeetingExpireIfNoUserJoinedInMinutes(meetingExpireIfNoUserJoinedInMinutes);
 		meeting.setMeetingExpireWhenLastUserLeftInMinutes(meetingExpireWhenLastUserLeftInMinutes);
 		meeting.setUserInactivityInspectTimerInMinutes(userInactivityInspectTimerInMinutes);
 		meeting.setUserActivitySignResponseDelayInMinutes(userActivitySignResponseDelayInMinutes);
 		meeting.setUserInactivityThresholdInMinutes(userInactivityThresholdInMinutes);
+//		meeting.setHtml5InstanceId(html5InstanceId);
 
         // Add extra parameters for breakout room
         if (isBreakout) {
@@ -550,25 +551,13 @@ public class ParamsProcessorUtil {
 		return serviceEnabled;
 	}
 	
-	public String getDefaultClientUrl() {
-		return defaultClientUrl;
+	public String getDefaultHTML5ClientUrl() {
+		return defaultHTML5ClientUrl;
 	}
 
 	public String getDefaultGuestWaitURL() {
 		return defaultGuestWaitURL;
         }
-
-	public String getHTML5ClientUrl() {
-		return html5ClientUrl;
-	}
-
-	public Boolean getAttendeesJoinViaHTML5Client() {
-		return attendeesJoinViaHTML5Client;
-	}
-
-	public Boolean getModeratorsJoinViaHTML5Client() {
-		return moderatorsJoinViaHTML5Client;
-	}
 
 	public Boolean getAllowRequestsWithoutSession() {
 		return allowRequestsWithoutSession;
@@ -689,6 +678,17 @@ public class ParamsProcessorUtil {
 		}
 		
 		return rec;
+	}
+
+	public int processHtml5InstanceId(String instanceId) {
+		int html5InstanceId = 1;
+		try {
+            html5InstanceId = Integer.parseInt(instanceId);
+		} catch(Exception ex) {
+            html5InstanceId = defaultHtml5InstanceId;
+		}
+
+		return html5InstanceId;
 	}
 		
 	public int processMaxUser(String maxUsers) {
@@ -912,28 +912,16 @@ public class ParamsProcessorUtil {
 		this.defaultNumDigitsForTelVoice = defaultNumDigitsForTelVoice;
 	}
 
-	public void setDefaultClientUrl(String defaultClientUrl) {
-		this.defaultClientUrl = defaultClientUrl;
+	public void setDefaultHTML5ClientUrl(String defaultHTML5ClientUrl) {
+		this.defaultHTML5ClientUrl = defaultHTML5ClientUrl;
 	}
 
 	public void setDefaultGuestWaitURL(String url) {
 		this.defaultGuestWaitURL = url;
         }
 
-	public void setHtml5ClientUrl(String html5ClientUrl) {
-		this.html5ClientUrl = html5ClientUrl;
-	}
-
-	public void setModeratorsJoinViaHTML5Client(Boolean moderatorsJoinViaHTML5Client) {
-		this.moderatorsJoinViaHTML5Client = moderatorsJoinViaHTML5Client;
-	}
-
 	public void setAllowRequestsWithoutSession(Boolean allowRequestsWithoutSession) {
 		this.allowRequestsWithoutSession = allowRequestsWithoutSession;
-	}
-
-	public void setAttendeesJoinViaHTML5Client(Boolean attendeesJoinViaHTML5Client) {
-		this.attendeesJoinViaHTML5Client = attendeesJoinViaHTML5Client;
 	}
 
 	public void setDefaultMeetingDuration(int defaultMeetingDuration) {
@@ -956,6 +944,10 @@ public class ParamsProcessorUtil {
         this.webcamsOnlyForModerator = webcamsOnlyForModerator;
     }
 	
+	public void setUseDefaultAvatar(Boolean value) {
+		this.useDefaultAvatar = value;
+	}
+
 	public void setdefaultAvatarURL(String url) {
 		this.defaultAvatarURL = url;
 	}
@@ -964,24 +956,8 @@ public class ParamsProcessorUtil {
 		this.defaultGuestPolicy =  guestPolicy;
 	}
 
-	public void setMaxInactivityTimeoutMinutes(Integer value) {
-		maxInactivityTimeoutMinutes = value;
-	}
-
 	public void setClientLogoutTimerInMinutes(Integer value) {
 		clientLogoutTimerInMinutes = value;
-	}
-
-	public void setWarnMinutesBeforeMax(Integer value) {
-		warnMinutesBeforeMax = value;
-	}
-
-	public Integer getMaxInactivityTimeoutMinutes() {
-		return maxInactivityTimeoutMinutes;
-	}
-
-	public Integer getWarnMinutesBeforeMax() {
-		return warnMinutesBeforeMax;
 	}
 
 	public void setMeetingExpireWhenLastUserLeftInMinutes(Integer value) {

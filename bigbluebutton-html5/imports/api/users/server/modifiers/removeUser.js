@@ -4,6 +4,7 @@ import VideoStreams from '/imports/api/video-streams';
 import Logger from '/imports/startup/server/logger';
 import stopWatchingExternalVideo from '/imports/api/external-videos/server/methods/stopWatchingExternalVideo';
 import clearUserInfoForRequester from '/imports/api/users-infos/server/modifiers/clearUserInfoForRequester';
+import ClientConnections from '/imports/startup/server/ClientConnections';
 
 const clearAllSessions = (sessionUserId) => {
   const serverSessions = Meteor.server.sessions;
@@ -30,30 +31,20 @@ export default function removeUser(meetingId, userId) {
     userId,
   };
 
-  const modifier = {
-    $set: {
-      connectionStatus: 'offline',
-      validated: false,
-      emoji: 'none',
-      presenter: false,
-      role: 'VIEWER',
-    },
-  };
-
   try {
     VideoStreams.remove({ meetingId, userId });
-    const numberAffected = Users.update(selector, modifier);
+    const sessionUserId = `${meetingId}-${userId}`;
 
-    if (numberAffected) {
-      const sessionUserId = `${meetingId}-${userId}`;
-      clearAllSessions(sessionUserId);
+    ClientConnections.removeClientConnection(`${meetingId}--${userId}`);
 
-      clearUserInfoForRequester(meetingId, userId);
+    clearAllSessions(sessionUserId);
 
-      Logger.info(`Removed user id=${userId} meeting=${meetingId}`);
-      return;
-    }
+    clearUserInfoForRequester(meetingId, userId);
+
+    Users.remove(selector);
+
+    Logger.info(`Removed user id=${userId} meeting=${meetingId}`);
   } catch (err) {
-    Logger.error(`Removing user from collection: ${err}`);
+    Logger.error(`Removing user from Users collection: ${err}`);
   }
 }
